@@ -32,10 +32,15 @@ var URL_DEFAULT = "http://fierce-reaches-1073.herokuapp.com";
 var checks;
 
 var cheerioHtmlFile = function(infile) {
-  fs.readFile(infile, function(content) {
-    var fn = cheerio.load(content);
+  fs.readFile(infile, function(err, result) {
+    if (err) {
+      console.error(infile + " does not exist.", err);
+    }
+    else {
+      var fn = cheerio.load(result);
 
-    checkContent(cheerio.load(content));
+      checkContent(fn);
+    }
   });
 };
 
@@ -44,7 +49,7 @@ var cheerioURLFile = function(inurl) {
 
   url.on("complete", function(result) {
     if (result instanceof Error) {
-      console.error(inurl + " is not a valid URL. Exiting.", result);
+      console.error(inurl + " is not a valid URL.", result);
     }
     else {
       var fn = cheerio.load(result);
@@ -85,7 +90,7 @@ if(require.main == module) {
   checks = loadChecks(program.checks).sort();
 
   if (program.file) {
-    program.file.forEach(cheerioHtmlFile);
+    cheerioHtmlFile(program.file);
   }
 
   if (program.url) {
