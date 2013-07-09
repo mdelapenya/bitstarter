@@ -25,11 +25,24 @@ var fs = require('fs');
 var program = require('commander');
 var cheerio = require('cheerio');
 var restler = require('restler');
-var HTMLFILE_DEFAULT = "index.html";
+
 var CHECKSFILE_DEFAULT = "checks.json";
-var URL_DEFAULT = "http://fierce-reaches-1073.herokuapp.com";
 
 var checks;
+
+var checkContent = function(processFunction) {
+  var out = {};
+
+  checks.forEach(function(item) {
+    out[item] = processFunction(item).length > 0;
+  });
+
+  var outJson = JSON.stringify(out, null, 4);
+
+  console.log(outJson);
+
+  return out;
+};
 
 var cheerioHtmlFile = function(infile) {
   fs.readFile(infile, function(err, result) {
@@ -64,20 +77,6 @@ var cheerioURLFile = function(inurl) {
 */
 var loadChecks = function(checksfile) {
   return JSON.parse(fs.readFileSync(checksfile));
-};
-
-var checkContent = function(processFunction) {
-  var out = {};
-
-  checks.forEach(function(item) {
-    out[item] = processFunction(item).length > 0;
-  });
-
-  var outJson = JSON.stringify(out, null, 4);
-
-  console.log(outJson);
-
-  return out;
 };
 
 if(require.main == module) {
