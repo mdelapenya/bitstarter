@@ -64,11 +64,9 @@ var loadChecks = function(checksfile) {
 var checkContent = function(processFunction) {
   var out = {};
 
-  for(var ii in checks) {
-    var present = processFunction(checks[ii]).length > 0;
-
-    out[checks[ii]] = present;
-  }
+  checks.forEach(function(item) {
+    out[item] = processFunction(item).length > 0;
+  });
 
   var outJson = JSON.stringify(out, null, 4);
 
