@@ -36,9 +36,7 @@ var getHtmlFromFile = function(infile) {
       console.error(infile + " does not exist.", err);
     }
     else {
-      var fn = cheerio.load(result);
-
-      _checkContent(fn);
+      _processResult(result);
     }
   });
 };
@@ -51,9 +49,7 @@ var getHtmlFromURL = function(inurl) {
       console.error(inurl + " is not a valid URL.", result);
     }
     else {
-      var fn = cheerio.load(result);
-
-      _checkContent(fn);
+      _processResult(result);
     }
   });
 };
@@ -78,6 +74,12 @@ var _checkContent = function(processFunction) {
 var _loadChecks = function(checksfile) {
   return JSON.parse(fs.readFileSync(checksfile));
 };
+
+var _processResult = function(result) {
+  var fn = cheerio.load(result);
+
+  _checkContent(fn);
+}
 
 if(require.main == module) {
   program
