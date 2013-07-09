@@ -30,7 +30,35 @@ var CHECKSFILE_DEFAULT = "checks.json";
 
 var checks;
 
-var checkContent = function(processFunction) {
+var getHtmlFromFile = function(infile) {
+  fs.readFile(infile, function(err, result) {
+    if (err) {
+      console.error(infile + " does not exist.", err);
+    }
+    else {
+      var fn = cheerio.load(result);
+
+      _checkContent(fn);
+    }
+  });
+};
+
+var getHtmlFromURL = function(inurl) {
+  var url = restler.get(inurl);
+
+  url.on("complete", function(result) {
+    if (result instanceof Error) {
+      console.error(inurl + " is not a valid URL.", result);
+    }
+    else {
+      var fn = cheerio.load(result);
+
+      _checkContent(fn);
+    }
+  });
+};
+
+var _checkContent = function(processFunction) {
   var out = {};
 
   checks.forEach(function(item) {
@@ -44,38 +72,10 @@ var checkContent = function(processFunction) {
   return out;
 };
 
-var cheerioHtmlFile = function(infile) {
-  fs.readFile(infile, function(err, result) {
-    if (err) {
-      console.error(infile + " does not exist.", err);
-    }
-    else {
-      var fn = cheerio.load(result);
-
-      checkContent(fn);
-    }
-  });
-};
-
-var cheerioURLFile = function(inurl) {
-  var url = restler.get(inurl);
-
-  url.on("complete", function(result) {
-    if (result instanceof Error) {
-      console.error(inurl + " is not a valid URL.", result);
-    }
-    else {
-      var fn = cheerio.load(result);
-
-      checkContent(fn);
-    }
-  });
-};
-
 /*
 * It's better to read the check file in a synchronous way: we need that file to process
 */
-var loadChecks = function(checksfile) {
+var _loadChecks = function(checksfile) {
   return JSON.parse(fs.readFileSync(checksfile));
 };
 
@@ -86,16 +86,17 @@ if(require.main == module) {
     .option('-u, --url [application_url]', 'URL where the application is deployed.')
     .parse(process.argv);
 
-  checks = loadChecks(program.checks).sort();
+  checks = _loadChecks(program.checks).sort();
 
   if (program.file) {
-    cheerioHtmlFile(program.file);
+    getHtmlFromFile(program.file);
   }
 
   if (program.url) {
-    cheerioURLFile(program.url);
+    getHtmlFromURL(program.url);
   }
 }
 else {
-  exports.checkContent = checkContent;
+  exports.getHtmlFromFile = getHtmlFromFile;
+  exports.getHtmlFromURL = getHtmlFromURL;
 }
