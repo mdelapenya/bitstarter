@@ -24,79 +24,76 @@ References:
 var fs = require('fs');
 var program = require('commander');
 var cheerio = require('cheerio');
+var restler = require('restler');
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
 var URL_DEFAULT = "http://fierce-reaches-1073.herokuapp.com";
 
-var assertFileExists = function(infile) {
-  var instr = infile.toString();
+var checks;
 
-  if(!fs.existsSync(instr)) {
-    console.log("%s does not exist. Exiting.", instr);
+var cheerioHtmlFile = function(infile) {
+  fs.readFile(infile, function(content) {
+    var fn = cheerio.load(content);
 
-    process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
-  }
-
-  return instr;
+    checkContent(cheerio.load(content));
+  });
 };
 
-var assertURLExists = function(inurl) {
-  var url = require("restler").get(inurl);
+var cheerioURLFile = function(inurl) {
+  var url = restler.get(inurl);
 
   url.on("complete", function(result) {
     if (result instanceof Error) {
-      console.log(inurl + " is not a valid URL. Exiting.", result);
-
-      process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code  
+      console.error(inurl + " is not a valid URL. Exiting.", result);
     }
     else {
-      return result;
+      var fn = cheerio.load(result);
+
+      checkContent(fn);
     }
   });
-}
-
-var cheerioHtmlFile = function(htmlfile) {
-  return cheerio.load(fs.readFileSync(htmlfile));
 };
 
+/*
+* It's better to read the check file in a synchronous way: we need that file to process
+*/
 var loadChecks = function(checksfile) {
   return JSON.parse(fs.readFileSync(checksfile));
 };
 
-var checkHtmlFile = function(htmlfile, checksfile) {
-  $ = cheerioHtmlFile(htmlfile);
-
-  var checks = loadChecks(checksfile).sort();
+var checkContent = function(processFunction) {
   var out = {};
 
   for(var ii in checks) {
-    var present = $(checks[ii]).length > 0;
+    var present = processFunction(checks[ii]).length > 0;
 
     out[checks[ii]] = present;
   }
 
-  return out;
-};
+  var outJson = JSON.stringify(out, null, 4);
 
-var clone = function(fn) {
-  // Workaround for commander.js issue.
-  // http://stackoverflow.com/a/6772648
-  return fn.bind({});
+  console.log(outJson);
+
+  return out;
 };
 
 if(require.main == module) {
   program
-    .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
-    .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
-    .option('-u, --url <html_file>', 'URL where application is deployed', clone(assertURLExists), URL_DEFAULT);
+    .option('-c, --checks [checks_filename]', 'The file where html markup is defined.', CHECKSFILE_DEFAULT)
+    .option('-f, --file [hd_file]', 'Hard-disk File to check.')
+    .option('-u, --url [application_url]', 'URL where the application is deployed.')
+    .parse(process.argv);
 
-  program.parse(process.argv);
+  checks = loadChecks(program.checks).sort();
 
-  var checkJson = checkHtmlFile(program.file, program.checks);
-  var outJson = JSON.stringify(checkJson, null, 4);
+  if (program.file) {
+    program.file.forEach(cheerioHtmlFile);
+  }
 
-  console.log(outJson);
+  if (program.url) {
+    cheerioURLFile(program.url);
+  }
 }
 else {
-  exports.checkHtmlFile = checkHtmlFile;
+  exports.checkContent = checkContent;
 }
